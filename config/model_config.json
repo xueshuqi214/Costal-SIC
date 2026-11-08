@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0.0",
+  "application": {
+    "name": "Coastal SIC",
+    "full_name": "滨海湿地土壤无机碳遥感估算系统",
+    "name_en": "Coastal Wetland Soil Inorganic Carbon Remote Sensing Estimation System",
+    "version": "1.0.0",
+    "author": "Coastal SIC Project",
+    "description": "面向滨海湿地土壤无机碳（SIC）空间分布的遥感预测应用。导入多波段遥感特征影像，选择对应的 Landsat 或 Sentinel 数据集，软件将自动调用预先训练好的机器学习模型完成逐像元 SIC 估算，并导出带完整空间参考信息的 GeoTIFF 结果。"
+  },
+  "raster_io": {
+    "block_size": 256,
+    "output_nodata": -9999.0,
+    "output_dtype": "float32",
+    "output_compress": "deflate",
+    "output_predictor": 2,
+    "max_memory_mb": 1024
+  },
+  "datasets": {
+    "landsat": {
+      "display_name": "Landsat",
+      "algorithm": "RandomForestRegressor",
+      "algorithm_display": "随机森林（Random Forest）",
+      "model_file": "models/landsat_rf.joblib",
+      "random_state": 1711,
+      "requires_scaler": false,
+      "model_package_format": "bare_estimator",
+      "features": [
+        "Lon",
+        "SI",
+        "DI",
+        "NDVI",
+        "NIR",
+        "Lat",
+        "NDMI",
+        "CCI",
+        "Green",
+        "SWIR2"
+      ],
+      "band_name_aliases": {
+        "Lon": ["Lon", "LONGITUDE", "longitude", "lon"],
+        "Lat": ["Lat", "LATITUDE", "latitude", "lat"],
+        "SI": ["SI", "Salinity_Index"],
+        "DI": ["DI", "Drought_Index"],
+        "NDVI": ["NDVI"],
+        "NIR": ["NIR", "B5", "SR_B5"],
+        "NDMI": ["NDMI"],
+        "CCI": ["CCI", "Carbonate_Content_Index"],
+        "Green": ["Green", "B3", "SR_B3"],
+        "SWIR2": ["SWIR2", "B7", "SR_B7"]
+      },
+      "expected_crs": "EPSG:4326",
+      "crs_is_advisory": true
+    },
+    "sentinel": {
+      "display_name": "Sentinel",
+      "algorithm": "XGBRegressor",
+      "algorithm_display": "极端梯度提升（XGBoost）",
+      "model_file": "models/sentinel_xgb.joblib",
+      "random_state": 1684,
+      "requires_scaler": true,
+      "model_package_format": "dict_with_scaler",
+      "features": [
+        "VV",
+        "B7",
+        "B6",
+        "CCI",
+        "Lon",
+        "VH",
+        "Lat",
+        "B12",
+        "B11",
+        "B4"
+      ],
+      "band_name_aliases": {
+        "VV": ["VV", "VV_db", "sigma0_VV"],
+        "VH": ["VH", "VH_db", "sigma0_VH"],
+        "B4": ["B4", "SR_B4"],
+        "B6": ["B6", "SR_B6"],
+        "B7": ["B7", "SR_B7"],
+        "B11": ["B11", "SR_B11"],
+        "B12": ["B12", "SR_B12"],
+        "CCI": ["CCI", "Carbonate_Content_Index"],
+        "Lon": ["Lon", "LONGITUDE", "longitude", "lon"],
+        "Lat": ["Lat", "LATITUDE", "latitude", "lat"]
+      },
+      "expected_crs": "EPSG:4326",
+      "crs_is_advisory": true
+    }
+  },
+  "validation": {
+    "band_name_matching": "strict",
+    "allow_positional_fallback": false,
+    "max_valid_ratio_warning": 0.05,
+    "max_valid_ratio_error": 0.0,
+    "min_valid_pixels": 1,
+    "sanitize_output": true
+  }
+}

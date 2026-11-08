@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 打包产物
+build/
+dist/
+*.manifest
+
+# 运行产物
+output/_test/
+output/_screens/
+output/*.tif
+output/*.tif.json
+*.log
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
