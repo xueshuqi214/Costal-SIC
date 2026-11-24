@@ -36,17 +36,9 @@ try:
 except Exception:
     pass
 
-# xgboost 依赖 native 库 lib/xgboost.dll，PyInstaller 不会自动收集，
-# 缺少它时导入 XGBoost 会报 "Cannot find XGBoost Library"。
+# v2.0 起两套模型均为随机森林（scikit-learn），不再依赖 xgboost，
+# 因此不再收集 lib/xgboost.dll。
 binaries = []
-try:
-    binaries += collect_dynamic_libs("xgboost")
-except Exception:
-    pass
-try:
-    datas += collect_data_files("xgboost")
-except Exception:
-    pass
 
 # ---- 隐藏导入 --------------------------------------------------------
 # 只列出真正需要的子模块。collect_submodules 会连带扫入 torch/tensorflow
@@ -57,8 +49,6 @@ hiddenimports = [
     "sklearn.ensemble",
     "sklearn.tree._tree",
     "sklearn.tree",
-    "sklearn.preprocessing._data",
-    "sklearn.preprocessing",
     "sklearn.utils._typedefs",
     "sklearn.utils._heap",
     "sklearn.utils._sorting",
@@ -67,10 +57,6 @@ hiddenimports = [
     "sklearn.utils._bunch",
     "sklearn.neighbors._partition_nodes",
     "scipy.sparse.csgraph._validation",
-    # xgboost
-    "xgboost",
-    "xgboost.core",
-    "xgboost.sklearn",
     # 其他运行期依赖
     "joblib",
     "matplotlib.backends.backend_qtagg",

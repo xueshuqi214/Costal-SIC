@@ -63,27 +63,29 @@ python -m Coastal_SIC.cli inspect <影像路径>
 | 项目 | 结论 |
 |---|---|
 | 模型类型 | `RandomForestRegressor` |
-| 模型文件结构 | joblib 直接存 estimator，**无 scaler** |
+| 模型文件结构 | joblib 存 dict：`model` / `features` / `params` / 元数据，**无 scaler** |
 | `n_features_in_` | 10 |
-| `random_state` | 1711 |
-| 特征顺序 | `Lon, SI, DI, NDVI, NIR, Lat, NDMI, CCI, Green, SWIR2` |
+| `random_state` | 42 |
+| 特征顺序 | `Lat, Lon, NDVI, SI, DI, Green, NIR, SWIR_R, NDSI, Clay` |
+| 超参数 | `n_estimators=600, max_depth=6, max_features=sqrt, min_samples_leaf=3` |
+| 训练样本 | 107（train+test 合并，供制图） |
 
-特征顺序已由三方面交叉确认：训练脚本 `Landsat-RF.py` 的 `FEATURE_SETS`、
-原始预测脚本 `Landsat含量估算.py` 的 `EXPECTED_FEATURES`、
-以及输入影像 `JZ_SIC_Landsat_Features_*.tif` 的 10 个波段描述。三者完全一致。
+特征顺序以模型文件内嵌的 `features` 为准，`model_loader` 会在加载时
+与 `config/model_config.json` 交叉核验，不一致直接报错。
 
 ### Sentinel 模块
 
 | 项目 | 结论 |
 |---|---|
-| 模型类型 | `XGBRegressor` |
-| 模型文件结构 | joblib 存 dict：`model` / `scaler` / `features` / `method` / `random_state` |
+| 模型类型 | `RandomForestRegressor` |
+| 模型文件结构 | joblib 存 dict：`model` / `features` / `params` / 元数据，**无 scaler** |
 | `n_features_in_` | 10 |
-| `random_state` | 1684 |
-| 特征顺序（模型内嵌） | `VV, B7, B6, CCI, Lon, VH, Lat, B12, B11, B4` |
-| 标准化 | **必须**使用随模型保存的 `StandardScaler`，禁止重新拟合 |
+| `random_state` | 42 |
+| 特征顺序（模型内嵌） | `Lat, Lon, B7, VH, B5, VV, B8A, B2, B12, B6` |
+| 超参数 | `n_estimators=600, max_depth=6, max_features=sqrt, min_samples_leaf=1` |
+| 标准化 | **不需要**，两套模型均直接输入原始特征 |
 
-`scaler.mean_` 与 `scaler.scale_` 均已核实为已拟合的 10 维参数。
+原 v1.0 版本使用 XGBoost + StandardScaler，v2.0 已统一替换为随机森林模型。
 
 ---
 
@@ -150,14 +152,14 @@ VV, B7, B6, CCI, Lon, VH, Lat, B12, B11, B4
 ### Sentinel 流程正确性
 
 用波段名正确的测试影像，与一份**完全独立实现**的预测流程（不复用本软件任何代码，
-直接按特征名重排 + `scaler.transform` + `model.predict`）对比：
+直接按特征名重排 + `model.predict`）对比：
 
 | 对照精度 | 数值不同像元 | 最大绝对差 | 结论 |
 |---|---|---|---|
 | float32（与原始脚本一致） | 0 | 0.0 | **逐像元完全相同** |
 | float64 | 2,861 (0.26%) | 0.32 | 精度敏感参考 |
 
-float64 下的少量差异来自 XGBoost 决策树的分裂阈值：输入相差约 1e-7 时，
+float64 下的少量差异来自决策树的分裂阈值：输入相差约 1e-7 时，
 约 0.26% 的像元会落在阈值另一侧，产生约 0.32 的离散跳变。这是树模型的固有特性，
 原始脚本同样使用 float32，因此软件与原始脚本位级一致。
 
@@ -168,7 +170,7 @@ cd E:\NewGame\软著所需代码
 python -m unittest Coastal_SIC.tests.test_core -v
 ```
 
-18 项全部通过，覆盖：配置正确性、模型加载与特征核验、标准化强制校验、
+18 项全部通过，覆盖：配置正确性、模型加载与特征核验、
 波段名映射（含乱序与缺失）、导出路径安全检查。
 
 ---
@@ -185,7 +187,7 @@ Coastal_SIC/
 │
 ├── models/                  # 模型文件（可替换）
 │   ├── landsat_rf.joblib
-│   └── sentinel_xgb.joblib
+│   └── sentinel_rf.joblib
 │
 ├── config/
 │   └── model_config.json    # 数据集定义、特征顺序、校验策略
@@ -247,7 +249,7 @@ gdal_edit.py -setbanddesc 1 Lon -setbanddesc 2 SI ... input.tif
 ```python
 import rasterio
 with rasterio.open("input.tif", "r+") as ds:
-    for i, name in enumerate(["Lon","SI","DI","NDVI","NIR","Lat","NDMI","CCI","Green","SWIR2"], 1):
+    for i, name in enumerate(["Lat","Lon","NDVI","SI","DI","Green","NIR","SWIR_R","NDSI","Clay"], 1):
         ds.set_band_description(i, name)
 ```
 

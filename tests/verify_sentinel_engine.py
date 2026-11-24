@@ -2,7 +2,7 @@
 
 对照基准的精度选择很关键：
 
-- XGBoost 是决策树集成，其内部按阈值比较分裂。若输入精度与原始脚本不同
+- 随机森林是决策树集成，其内部按阈值比较分裂。若输入精度与原始脚本不同
   （float64 vs float32），极少数像元（实测 0.26%）会因约 1e-7 的输入差异
   落在分裂阈值两侧，产生约 0.3 的离散跳变。
 - 原始预测脚本 `Sentinels含量估算.py` 使用 `.astype(np.float32)` 读取，
@@ -22,7 +22,7 @@ import joblib
 import numpy as np
 import rasterio
 
-MODEL = Path(r"E:\NewGame\软著所需代码\Coastal_SIC\models\sentinel_xgb.joblib")
+MODEL = Path(r"E:\NewGame\软著所需代码\Coastal_SIC\models\sentinel_rf.joblib")
 SRC = Path(r"E:\NewGame\软著所需代码\Coastal_SIC\output\_test\Sentinel_Features_Renamed_2020.tif")
 ENGINE_OUT = Path(r"E:\NewGame\软著所需代码\Coastal_SIC\output\_test\VERIFY_Sentinel_2020.tif")
 
@@ -30,7 +30,7 @@ ENGINE_OUT = Path(r"E:\NewGame\软著所需代码\Coastal_SIC\output\_test\VERIF
 def independent_predict(dtype) -> np.ndarray:
     """完全独立地按波段名重排 + 标准化 + 预测，不复用引擎代码。"""
     pkg = joblib.load(MODEL)
-    model, scaler, features = pkg["model"], pkg["scaler"], pkg["features"]
+    model, scaler, features = pkg["model"], pkg.get("scaler"), pkg["features"]
 
     with rasterio.open(SRC) as src:
         names = list(src.descriptions)
@@ -48,7 +48,10 @@ def independent_predict(dtype) -> np.ndarray:
         valid &= ~np.any(flat == nodata, axis=1)
 
     out = np.full(flat.shape[0], -9999.0, dtype=np.float64)
-    out[valid] = model.predict(scaler.transform(flat[valid]))
+    x = flat[valid]
+    if scaler is not None:
+        x = scaler.transform(x)
+    out[valid] = model.predict(x)
     return out.reshape(h, w)
 
 

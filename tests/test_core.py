@@ -46,19 +46,19 @@ class TestConfig(unittest.TestCase):
         ds = self.config.dataset("landsat")
         self.assertEqual(
             ds["features"],
-            ["Lon", "SI", "DI", "NDVI", "NIR", "Lat", "NDMI", "CCI", "Green", "SWIR2"],
+            ["Lat", "Lon", "NDVI", "SI", "DI", "Green", "NIR", "SWIR_R", "NDSI", "Clay"],
         )
         self.assertFalse(ds["requires_scaler"])
-        self.assertEqual(ds["random_state"], 1711)
+        self.assertEqual(ds["random_state"], 42)
 
     def test_sentinel_features(self) -> None:
         ds = self.config.dataset("sentinel")
         self.assertEqual(
             ds["features"],
-            ["VV", "B7", "B6", "CCI", "Lon", "VH", "Lat", "B12", "B11", "B4"],
+            ["Lat", "Lon", "B7", "VH", "B5", "VV", "B8A", "B2", "B12", "B6"],
         )
-        self.assertTrue(ds["requires_scaler"])
-        self.assertEqual(ds["random_state"], 1684)
+        self.assertFalse(ds["requires_scaler"])
+        self.assertEqual(ds["random_state"], 42)
 
     def test_unknown_dataset_raises(self) -> None:
         with self.assertRaises(KeyError):
@@ -74,28 +74,24 @@ class TestModelLoader(unittest.TestCase):
         self.assertEqual(m.n_features, 10)
         self.assertFalse(m.requires_scaler)
         self.assertIsNone(m.scaler)
-        self.assertEqual(m.random_state, 1711)
+        self.assertEqual(m.random_state, 42)
         self.assertEqual(type(m.estimator).__name__, "RandomForestRegressor")
 
     def test_sentinel_model(self) -> None:
         m = load_model("sentinel", self.config)
         self.assertEqual(m.n_features, 10)
-        self.assertTrue(m.requires_scaler)
-        self.assertIsNotNone(m.scaler)
-        self.assertEqual(type(m.estimator).__name__, "XGBRegressor")
-        # 关键：标准化器必须已拟合，且参数完整
-        self.assertTrue(hasattr(m.scaler, "mean_"))
-        self.assertEqual(len(m.scaler.mean_), 10)
+        self.assertFalse(m.requires_scaler)
+        self.assertIsNone(m.scaler)
+        self.assertEqual(type(m.estimator).__name__, "RandomForestRegressor")
 
-    def test_sentinel_predict_scales_input(self) -> None:
-        """验证 predict() 内部确实调用了 scaler.transform。"""
+    def test_sentinel_predict_without_scaler(self) -> None:
+        """新模型无需标准化，predict() 应直接调用 estimator。"""
         m = load_model("sentinel", self.config)
         x = np.zeros((3, 10), dtype=np.float32)
         y = m.predict(x)
         self.assertEqual(y.shape, (3,))
 
-        # 手工复算
-        expected = m.estimator.predict(m.scaler.transform(x))
+        expected = m.estimator.predict(x)
         np.testing.assert_allclose(y, expected, rtol=0, atol=0)
 
     def test_feature_mismatch_detected(self) -> None:
@@ -114,7 +110,7 @@ class TestBandMapping(unittest.TestCase):
         self.ds = self.config.dataset("sentinel")
 
     def test_exact_name_match(self) -> None:
-        names = ["VV", "B7", "B6", "CCI", "Lon", "VH", "Lat", "B12", "B11", "B4"]
+        names = ["Lat", "Lon", "B7", "VH", "B5", "VV", "B8A", "B2", "B12", "B6"]
         mapping, issues = resolve_band_mapping(
             names, self.ds["features"], self.ds, strict=True
         )
@@ -124,18 +120,19 @@ class TestBandMapping(unittest.TestCase):
 
     def test_reordered_bands_mapped_by_name(self) -> None:
         """波段顺序打乱时，仍应按名称正确映射。"""
-        names = ["B4", "B11", "B12", "Lat", "VH", "Lon", "CCI", "B6", "B7", "VV"]
+        names = ["B6", "B12", "B2", "B8A", "VV", "B5", "VH", "B7", "Lon", "Lat"]
         mapping, issues = resolve_band_mapping(
             names, self.ds["features"], self.ds, strict=True
         )
         self.assertEqual(len(issues), 0)
         by_feature = {m.feature: m.band_index for m in mapping if m}
-        self.assertEqual(by_feature["VV"], 9)
-        self.assertEqual(by_feature["B4"], 0)
-        self.assertEqual(by_feature["B6"], 7)
+        self.assertEqual(by_feature["Lat"], 9)
+        self.assertEqual(by_feature["Lon"], 8)
+        self.assertEqual(by_feature["B7"], 7)
+        self.assertEqual(by_feature["VV"], 4)
 
     def test_missing_band_is_error(self) -> None:
-        names = ["VV", "B7", "CCI", "Lon", "VH", "Lat", "B12", "B11", "B4", "B8"]
+        names = ["Lat", "Lon", "B7", "VH", "B5", "VV", "B8A", "B2", "B12"]
         mapping, issues = resolve_band_mapping(
             names, self.ds["features"], self.ds, strict=True
         )

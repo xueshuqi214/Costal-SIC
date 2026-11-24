@@ -135,6 +135,7 @@ class HomePage(QWidget):
         items = [
             "GeoTIFF 中每个波段需写入特征名称",
             "Landsat 需 10 个特征，Sentinel 需 10 个特征",
+            "两套模型均为随机森林，输入不做标准化",
             "预测结果自动继承原始 CRS 与空间范围",
             "大影像分块处理，不占用过多内存",
         ]

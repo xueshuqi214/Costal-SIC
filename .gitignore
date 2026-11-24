@@ -21,3 +21,6 @@ output/*.tif.json
 .vscode/
 .idea/
 *.swp
+
+# v2.0 模型替换前的旧文件备份（仅本地保留）
+_backup_old/
