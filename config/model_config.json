@@ -1,10 +1,10 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.0.0",
   "application": {
     "name": "Coastal SIC",
     "full_name": "滨海湿地土壤无机碳遥感估算系统",
     "name_en": "Coastal Wetland Soil Inorganic Carbon Remote Sensing Estimation System",
-    "version": "2.0.0",
+    "version": "1.0.0",
     "author": "Coastal SIC Project",
     "description": "面向滨海湿地土壤无机碳（SIC）空间分布的遥感预测应用。导入多波段遥感特征影像，选择对应的 Landsat 或 Sentinel 数据集，软件将自动调用预先训练好的随机森林模型完成逐像元 SIC 估算，并导出带完整空间参考信息的 GeoTIFF 结果。"
   },

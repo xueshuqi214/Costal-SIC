@@ -36,7 +36,7 @@ try:
 except Exception:
     pass
 
-# v2.0 起两套模型均为随机森林（scikit-learn），不再依赖 xgboost，
+# 两套模型均为随机森林（scikit-learn），不依赖 xgboost，
 # 因此不再收集 lib/xgboost.dll。
 binaries = []
 

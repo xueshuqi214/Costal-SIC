@@ -85,7 +85,7 @@ python -m Coastal_SIC.cli inspect <影像路径>
 | 超参数 | `n_estimators=600, max_depth=6, max_features=sqrt, min_samples_leaf=1` |
 | 标准化 | **不需要**，两套模型均直接输入原始特征 |
 
-原 v1.0 版本使用 XGBoost + StandardScaler，v2.0 已统一替换为随机森林模型。
+两套模型均采用随机森林，输入特征不做标准化。
 
 ---
 
